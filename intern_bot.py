@@ -35,7 +35,7 @@ EXCEL_FILE = "intern_feedback.xlsx"
 ADMIN_USER_ID = 2127600841 
 
 # ⚠️ 2. ជំនួស Group Chat ID នៅទីនេះ (ឧទាហរណ៍៖ -1001234567890)
-GROUP_CHAT_ID = -1001234567890 
+GROUP_CHAT_ID = -2127600841 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_first_name = update.message.from_user.first_name
