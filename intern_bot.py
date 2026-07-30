@@ -32,12 +32,33 @@ HEAD_NAME, DEPT, RATING, LIKE_DISLIKE, FUTURE_WISH = range(5)
 EXCEL_FILE = "intern_feedback.xlsx"
 
 # ⚠️ 1. ជំនួស Telegram ID របស់ Admin (មើលពី @userinfobot)
-ADMIN_USER_ID = 2127600841 
+ADMIN_USER_ID = 2127600841
 
+def has_user_submitted(user_id: int) -> bool:
+    """ មុខងារពិនិត្យមើលថា តើ Telegram User ID នេះធ្លាប់បានបំពេញស្ទង់មតិរួចហើយឬនៅ """
+    if os.path.exists(EXCEL_FILE):
+        try:
+            df = pd.read_excel(EXCEL_FILE)
+            if 'Telegram User ID' in df.columns:
+                submitted_ids = df['Telegram User ID'].dropna().astype(int).tolist()
+                return user_id in submitted_ids
+        except Exception as e:
+            logging.error(f"Error checking submission history: {e}")
+    return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
     user_first_name = update.message.from_user.first_name
-    
+
+    # 🔒 ចាក់សោ៖ ប្រសិនបើធ្លាប់បំពេញរួចហើយ មិនអនុញ្ញាតឱ្យចូលបំពេញទៀតឡើយ
+    if has_user_submitted(user_id):
+        await update.message.reply_text(
+            f"❌ **សួស្តី {user_first_name}!**\n\n"
+            f"ប្អូនបានបំពេញការស្ទង់មតិនេះរួចរាល់ហើយ! មិនអាចបំពេញសារជាថ្មីបានឡើយ។\n"
+            f"សូមអរគុណច្រើនសម្រាប់ការចូលរួម! 🌸"
+        )
+        return ConversationHandler.END
+
     await update.message.reply_text(
         f"សួស្តីប្អូន {user_first_name}! 🌸\n\n"
         f"សូមអរគុណសម្រាប់ការចំណាយពេល និងការខិតខំបំពេញការងារហាត់ការនាពេលកន្លងមក។\n"
@@ -89,6 +110,11 @@ async def save_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.full_name
 
+    # 🔒 ត្រួតពិនិត្យម្តងទៀត ការពារករណី Submit ច្រើនដងក្នុងពេលតែមួយ
+    if has_user_submitted(user_id):
+        await update.message.reply_text("❌ ប្អូនបានបំពេញរួចរាល់ហើយ!", reply_markup=ReplyKeyboardRemove())
+        return ConversationHandler.END
+
     intern_name = context.user_data['intern_name']
     dept = context.user_data['dept']
     rating = context.user_data['rating']
@@ -115,8 +141,8 @@ async def save_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         df_new.to_excel(EXCEL_FILE, index=False)
 
-    # --- 2. ផ្ញើសារជូនដំណឹងទៅក្នុង Telegram Group (ដូច Bot មុន) ---
-    group_message = (
+    # --- 2. ផ្ញើសារជូនដំណឹងទៅកាន់ Private Chat របស់ Admin ---
+    admin_message = (
         f"🔔 **មានការឆ្លើយតបស្ទង់មតិថ្មី!**\n\n"
         f"👤 **ឈ្មោះបុគ្គលិកហាត់ការ៖** {intern_name}\n"
         f"🏢 **នាយកដ្ឋាន៖** {dept}\n"
@@ -127,14 +153,14 @@ async def save_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     try:
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=group_message, parse_mode='Markdown')
+        await context.bot.send_message(chat_id=ADMIN_USER_ID, text=admin_message, parse_mode='Markdown')
     except Exception as e:
-        logging.error(f"Failed to send message to group: {e}")
+        logging.error(f"Failed to send message to Admin: {e}")
 
-    # --- 3. ឆ្លើយតបទៅកាន់អ្នកប្រឡង ឬអ្នកបំពេញ ---
+    # --- 3. ឆ្លើយតបទៅកាន់បុគ្គលិកហាត់ការ ---
     await update.message.reply_text(
         "🎉 **សូមអរគុណច្រើនសម្រាប់ការចែករំលែកមតិយោបល់!**\n"
-        "ទិន្នន័យរបស់ប្អូនត្រូវបានរក្សាទុកដោយជោគជ័យ។ ជូនពរប្អូនទទួលបានជោគជ័យក្នុងការងារ! 💐",
+        "ទិន្នន័យរបស់ប្អូនត្រូវបានរក្សាទុកដោយជោគជ័យ។ ជូនពរប្អូនទទួលបានជោគជ័យក្នុងការងារ!ពីការិយាល័យបុគ្គលិក 💐",
         reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
@@ -159,7 +185,7 @@ async def export_excel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("មិនទាន់មានទិន្នន័យស្ទង់មតិនៅឡើយទេ។")
 
 async def main():
-    # ⚠️ 3. ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
+    # ⚠️ 2. ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
     TOKEN = '8974673810:AAGTh6SlmpInxbWbMzQgQ0TqTGwCLDQm0TQ'
 
     threading.Thread(target=run_flask, daemon=True).start()
