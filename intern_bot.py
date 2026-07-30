@@ -31,14 +31,17 @@ logging.basicConfig(
 HEAD_NAME, DEPT, RATING, LIKE_DISLIKE, FUTURE_WISH = range(5)
 EXCEL_FILE = "intern_feedback.xlsx"
 
-# ⚠️ ជំនួស Telegram ID របស់ Admin នៅទីនេះ (មើលពី @userinfobot)
+# ⚠️ 1. ជំនួស Telegram ID របស់ Admin (មើលពី @userinfobot)
 ADMIN_USER_ID = 2127600841 
+
+# ⚠️ 2. ជំនួស Group Chat ID នៅទីនេះ (ឧទាហរណ៍៖ -1001234567890)
+GROUP_CHAT_ID = -1001234567890 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_first_name = update.message.from_user.first_name
     
     await update.message.reply_text(
-        f"ជម្រាបសួរ {user_first_name}! 🌸\n\n"
+        f"សួស្តីប្អូន {user_first_name}! 🌸\n\n"
         f"សូមអរគុណសម្រាប់ការចំណាយពេល និងការខិតខំបំពេញការងារហាត់ការនាពេលកន្លងមក។\n"
         f"ដើម្បីកែលម្អបរិយាកាសធ្វើការឱ្យកាន់តែល្អ សូមប្អូនជួយចែករំលែកអារម្មណ៍ និងមតិយោបល់ដោយស្មោះត្រង់។\n\n"
         f"១. សូមបញ្ចូល **ឈ្មោះពេញរបស់ប្អូន (បុគ្គលិកហាត់ការ)** ៖"
@@ -88,14 +91,21 @@ async def save_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.full_name
 
+    intern_name = context.user_data['intern_name']
+    dept = context.user_data['dept']
+    rating = context.user_data['rating']
+    like_dislike = context.user_data['like_dislike']
+    future_wish = context.user_data['future_wish']
+
+    # --- 1. រក្សាទុកទិន្នន័យចូល Excel ---
     new_data = {
         'Telegram User ID': [user_id],
         'ឈ្មោះគណនី Telegram': [user_name],
-        'ឈ្មោះបុគ្គលិកហាត់ការ': [context.user_data['intern_name']],
-        'នាយកដ្ឋាន': [context.user_data['dept']],
-        'កម្រិតអារម្មណ៍/ចិត្ត': [context.user_data['rating']],
-        'មតិយោបល់/សម្ពាធដែលជួប': [context.user_data['like_dislike']],
-        'បំណងបន្តធ្វើការពេញសិទ្ធិ': [context.user_data['future_wish']]
+        'ឈ្មោះបុគ្គលិកហាត់ការ': [intern_name],
+        'នាយកដ្ឋាន': [dept],
+        'កម្រិតអារម្មណ៍/ចិត្ត': [rating],
+        'មតិយោបល់/សម្ពាធដែលជួប': [like_dislike],
+        'បំណងបន្តធ្វើការពេញសិទ្ធិ': [future_wish]
     }
     
     df_new = pd.DataFrame(new_data)
@@ -107,9 +117,26 @@ async def save_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         df_new.to_excel(EXCEL_FILE, index=False)
 
+    # --- 2. ផ្ញើសារជូនដំណឹងទៅក្នុង Telegram Group (ដូច Bot មុន) ---
+    group_message = (
+        f"🔔 **មានការឆ្លើយតបស្ទង់មតិថ្មី!**\n\n"
+        f"👤 **ឈ្មោះបុគ្គលិកហាត់ការ៖** {intern_name}\n"
+        f"🏢 **នាយកដ្ឋាន៖** {dept}\n"
+        f"🎭 **អារម្មណ៍ទូទៅ៖** {rating}\n"
+        f"💬 **មតិយោបល់/បញ្ហា៖** {like_dislike}\n"
+        f"🎯 **បំណងបន្តធ្វើការ៖** {future_wish}\n"
+        f"📲 **Telegram Account:** {user_name}"
+    )
+    
+    try:
+        await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=group_message, parse_mode='Markdown')
+    except Exception as e:
+        logging.error(f"Failed to send message to group: {e}")
+
+    # --- 3. ឆ្លើយតបទៅកាន់អ្នកប្រឡង ឬអ្នកបំពេញ ---
     await update.message.reply_text(
         "🎉 **សូមអរគុណច្រើនសម្រាប់ការចែករំលែកមតិយោបល់!**\n"
-        "ជូនពរប្អូនទទួលបានជោគជ័យ និងសំណាងល្អក្នុងបេសកកម្មការងារទៅថ្ងៃអនាគត! 💐",
+        "ទិន្នន័យរបស់ប្អូនត្រូវបានរក្សាទុកដោយជោគជ័យ។ ជូនពរប្អូនទទួលបានជោគជ័យក្នុងការងារ! 💐",
         reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
@@ -134,10 +161,9 @@ async def export_excel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("មិនទាន់មានទិន្នន័យស្ទង់មតិនៅឡើយទេ។")
 
 async def main():
-    # ⚠️ ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
+    # ⚠️ 3. ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
     TOKEN = '8974673810:AAGTh6SlmpInxbWbMzQgQ0TqTGwCLDQm0TQ'
 
-    # រត់ Flask Web Server លើ Thread ដាច់ដោយឡែក
     threading.Thread(target=run_flask, daemon=True).start()
 
     app = ApplicationBuilder().token(TOKEN).build()
@@ -158,12 +184,9 @@ async def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler('export', export_excel))
 
-    # ចាប់ផ្តើម Bot
     await app.initialize()
     await app.start()
     await app.updater.start_polling(drop_pending_updates=True)
-    
-    # រក្សាឱ្យ Bot រត់ជាបន្តបន្ទាប់
     await asyncio.Event().wait()
 
 if __name__ == '__main__':
