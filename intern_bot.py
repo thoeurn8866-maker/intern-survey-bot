@@ -1,4 +1,5 @@
 import os
+import asyncio
 import threading
 import logging
 import pandas as pd
@@ -16,11 +17,10 @@ web_app = Flask('')
 def home():
     return "Intern Survey Bot is Running!"
 
-def keep_alive():
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host='0.0.0.0', port=port)
 
-threading.Thread(target=keep_alive).start()
 # --------------------------------------------------------
 
 logging.basicConfig(
@@ -133,9 +133,12 @@ async def export_excel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("មិនទាន់មានទិន្នន័យស្ទង់មតិនៅឡើយទេ។")
 
-if __name__ == '__main__':
+async def main():
     # ⚠️ ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
     TOKEN = '8974673810:AAGTh6SlmpInxbWbMzQgQ0TqTGwCLDQm0TQ'
+
+    # រត់ Flask Web Server លើ Thread ដាច់ដោយឡែក
+    threading.Thread(target=run_flask, daemon=True).start()
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -155,4 +158,13 @@ if __name__ == '__main__':
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler('export', export_excel))
 
-    app.run_polling()
+    # ចាប់ផ្តើម Bot
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling(drop_pending_updates=True)
+    
+    # រក្សាឱ្យ Bot រត់ជាបន្តបន្ទាប់
+    await asyncio.Event().wait()
+
+if __name__ == '__main__':
+    asyncio.run(main())
