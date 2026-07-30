@@ -78,7 +78,7 @@ async def get_like_dislike(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_keyboard = [['✅ ចង់បន្តធ្វើការ', '❌ មិនចង់ទេ', '🤔 មិនទាន់ប្រាកដ']]
     
     await update.message.reply_text(
-        "៥. ប្រសិនបើក្រុមហ៊ុន/អង្គភាពមានឱកាស **តើប្អូនប្រាថ្នាចង់បន្តធ្វើការជាបុគ្គលិកពេញសិទ្ធិនៅទីនេះដែរឬទេ?** ៖",
+        "៥. ប្រសិនបើក្រុមហ៊ុន/អង្គភាពមានឱកាស **តើប្អូនប្រាថ្នាចង់បន្តធ្វើការជានិយោជិតជាប់កិច្ចសន្យានៅទីនេះដែរឬទេ?** ៖",
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
     return FUTURE_WISH
