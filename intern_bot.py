@@ -135,7 +135,7 @@ async def export_excel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     # ⚠️ ជំនួស API TOKEN របស់ Bot ថ្មីនៅទីនេះ
-    TOKEN = '8974673810:AAEa7MYu7uEPA2ap2XJkwlt_oKzwHl6Fio0'
+    TOKEN = '8974673810:AAGTh6SlmpInxbWbMzQgQ0TqTGwCLDQm0TQ'
 
     app = ApplicationBuilder().token(TOKEN).build()
 
